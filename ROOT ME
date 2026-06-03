@@ -1,0 +1,205 @@
+A CTF for beginners, Can you root me?
+
+Difficulty: Easy
+Room Link: RootMe
+Initial Access
+My IP Address: 10.2.79.42
+Machine IP Address: 10.10.76.241
+
+
+Task 1 : Deploy the machine
+Connect to TryHackMe network and deploy the machine. If you don’t know how to do this, complete the OpenVPN room first.
+
+Deploy the Machine
+Answer: No Answer Required.
+
+Task 2 : Reconnaissance
+First, let’s get information about the target.
+
+When tasked with exploiting a target, the initial step involves identifying the services active on that target. To accomplish this, we’ll employ the powerful tool nmap, along with its command options, to discover the running services on the target machine.
+
+Command: Nmap –sV –sC <machine IP>
+
+Command Options:
+
+-sV : Version detection
+-sC : Default scripts
+Press enter or click to view image in full size
+waiting for image
+From the above nmap port scanning, we have got the information about open ports and the services running on these ports. So now, we can answer the questions easily.
+
+Scan the machine, how many ports are open ?
+Answer: 2
+
+2. What version of Apache is running ?
+
+Answer: 2.4.29
+
+3. What service is running on port 22 ?
+
+Answer: ssh
+
+After conducting a Port Scan, we’ve identified that the target has two open ports, and one of these ports appears to be hosting a web server. Let’s access the server in our web browser to explore its contents.
+
+Press enter or click to view image in full size
+Waiting for image
+We’ve accessed a webpage. Now, let’s attempt a brute force attack on the website to uncover any hidden directories. Let’s use Gobuster for this.
+
+Command: gobuster dir -u http://10.10.76.241/ -w /usr/share/wordlists/dirb/common.txt -t 5
+
+Command Options:
+
+· dir : Perform directory brute forcing
+
+· -u : URL of Target (use your machine IP here)
+
+· -w : Wordlist (built in wordlist in Kali Linux)
+
+· -t : Threads (Used for parallelization)
+
+Press enter or click to view image in full size
+Waiting for Image
+Explanation of Output:
+
+· Status 403: You cannot go there
+
+· Status 200: You can visit this
+
+· Status 301: It can redirect to somewhere
+
+Press enter or click to view image in full size
+
+Alright, we’ve encountered three 301 status codes, and it appears that they might be worth exploring. Let’s take them one by one and see what each has to offer.
+
+/css/
+
+Press enter or click to view image in full size
+
+These appear to be nothing more than CSS files. Therefore, let’s explore the others.
+
+/js/
+
+Press enter or click to view image in full size
+
+It turns out to be just a CSS file.
+
+/panel/
+
+Press enter or click to view image in full size
+
+From the above scan we have a directory /panel that looks interesting and can be useful to us.
+
+4. Find directories on the web server using the GoBuster tool.
+
+Answer: No Answer needed.
+
+5. What is the hidden directory?
+
+Become a Medium member
+Answer: /panel/
+
+Task 3: Getting a Shell
+Find a form to upload and get a reverse shell, and find the flag.
+
+We’ve identified an upload page, so let’s experiment with files having different extensions to determine which ones the website permits. Initially, We’ll attempt to upload a .txt file.
+
+Press enter or click to view image in full size
+
+After the first upload attempt with a text file, it became evident that the server does permit the uploading of .txt files. Now wewill try to send a payload using php file.
+
+Sending a payload to Vulnerable Server:
+
+First go here for setting up payload provided by pentestmonkey.
+GitHub - pentestmonkey/php-reverse-shell
+Contribute to pentestmonkey/php-reverse-shell development by creating an account on GitHub.
+github.com
+
+We started by creating a file named “shell.php,” which will be uploaded to the vulnerable server.
+Next, we copied the payload from the GitHub repository and pasted it into the “shell.php” file.
+To tailor the payload to our needs, we made changes to the “IP Address”, specifying the IP address of our Attack Box and keeping the port as the default “1234” for our communication.
+These steps ensured that the “shell.php” file was configured correctly for our communication needs.
+Press enter or click to view image in full size
+
+After attempting to upload the “shell.php” file, we received a message indicating that PHP is not allowed, as I presumed.
+
+We tested different extensions like jpg and txt, and they uploaded without any issues. It became apparent that the server might be specifically filtering the .php extension. As a result, we decided to rename the script with a .php5 extension, which also uploaded successfully.
+
+Press enter or click to view image in full size
+
+Revisiting the process by opening the “uploads” directory:
+
+Press enter or click to view image in full size
+
+To set up a netcat listener, the process starts with opening your terminal and running the following command: “nc -lvnp 1234” (ensure you replace “1234” with the port number you’ve set in your PHP reverse shell file; in my case, I’ve chosen 1234, so it stays the same).
+
+Press enter or click to view image in full size
+
+As demonstrated, we have successfully gained entry to the system. Upon running the “whoami” command, we observed that we were operating as the “www-data” user.
+
+The TryHackMe question asks us to locate a file named “user.txt.” We can achieve this by utilizing the “find” command.
+
+Command: find –name user.txt
+
+Press enter or click to view image in full size
+
+This shows that we have a path of user.txt file. So now, using the cat command, we can access user.txt
+
+Command: cat /var/www/user.txt
+
+Press enter or click to view image in full size
+
+And here, we got out flag.
+
+1. user.txt
+
+Answer: THM{y0u_g0t_a_sh3ll}
+
+Task 4: Privilege escalation
+Now that we have a shell, let’s escalate our privileges to root.
+
+Our next goal is to escalate our privileges and attain root access. To do this, we’ll search for files on the system with the SUID bit set that are owned by the root user. Files with the SUID bit, when run, inherit the owner’s permissions. So, if we discover a binary owned by root with the SUID bit, we might be able to use it to enhance our privileges.
+
+Command: find / -user root –perm /4000 2>/dev/null
+
+We are using 4000 as it is the permission for SUID.
+
+Press enter or click to view image in full size
+
+We stumbled upon a Python path, which is a new discovery. This path serves as the solution to privilege escalation task 1.
+
+1. Search for files with SUID permission, which file is weird?
+
+Answer: usr/bin/python
+
+Next, we are heading to a well-known website for finding exploitation techniques, which is called “gtfobins” Here, we can search for Python, and we came across a SUID exploit for it.
+
+Press enter or click to view image in full size
+
+By clicking on SUID exploit, we can see its commands.
+
+Press enter or click to view image in full size
+
+So, we are using this command with the actual path of python we got from previous response of commands:
+
+This is super simple now. All we have to do is paste this command into our user shell, and then we can witness the magic unfold.
+Command: usr/bin/./python –c ‘import os; os.execl(“/bin/sh”, “sh”, “p”)’
+
+Press enter or click to view image in full size
+
+Now, let’s proceed with the second part of the command. Type “whoami” to confirm that we have indeed become a root user. After this, you can easily navigate to the root directory by using “cd root,” and then run “ls” to see the “root.txt” file right there.
+
+Alternatively, if you can’t find the “root.txt” file in the root directory, you can also utilize the “find” command, just like we did before, to search for it.
+
+Press enter or click to view image in full size
+
+Here we go!
+
+3. root.txt
+
+Answer: THM{pr1v1l3g3_3sc4l4t10n}
+
+CONGRATULATIONS 🎉 We’ve Successfully Conquered the Room!!!
+
+If you found this post valuable and it has made a positive impact, please don’t hesitate to express your thoughts in the comments or show your appreciation by giving it a round of applause. Your feedback and support mean a lot! 👏
+
+The RootMe CTF is aimed at beginners, and I highly recommend all newcomers to give this box a try and root it.
